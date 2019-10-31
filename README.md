@@ -8,6 +8,6 @@ Or better yet download them.
 
 In the Ya-Ge-zy directory do:
 
->>> wget https://filedn.com/llztAlmJ0zvkPa8QEheU5n5/yagezy-data.tar.xz
+`>>>` wget https://filedn.com/llztAlmJ0zvkPa8QEheU5n5/yagezy-data.tar.xz
 
->>> tar xf yagezy-data.tar.xz
+`>>>` tar xf yagezy-data.tar.xz
