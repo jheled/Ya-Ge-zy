@@ -76,9 +76,10 @@ def colorsMagic(window) :
   col6 = curses.color_pair(6) | curses.A_STANDOUT
 
 def showInfo(msg, info) :
-  info.clear()
-  info.addstr(0,0, msg, curses.color_pair(5))
-  info.refresh()
+  if info is not None:
+    info.clear()
+    info.addstr(0,0, msg, curses.color_pair(5))
+    info.refresh()
 
 dieFaces = (die1, die2, die3, die4, die5, die6)
 dieHeight = len(die1.split('\n'))
@@ -102,26 +103,29 @@ def ut_interface(window):
 
   opDieColor = curses.color_pair(5)
   compDieColor = curses.color_pair(2)
-  
+
   gameCombinations = game.gameCombinations(concise = True)
   nCombinations = n = len(gameCombinations)
 
-  sepLine = '├' + (('─'*4 + "┼")*n)[:-1] + '┤'
-  sepLine1 = '├' + (('─'*4 + "┴")*n)[:-1] + '┤'
+  sepLine = '├' + (('─'*4 + "┼")*nCombinations)[:-1] + '┤'
+  sepLine1 = '├' + (('─'*4 + "┴")*nCombinations)[:-1] + '┤'
+
+  dice_x0 = 10 + (len(sepLine)-30)//2
 
   info = window.subwin(10, 60, 15, 3)
-  debug = window.subwin(1, 120, 20, 3)
+  debug = None # window.subwin(1, 120, 20, 3)
+
+  window.addstr(3, 10, '  ' + "   ".join([x.upper() if not x[0].isdigit() else x
+                                          for x in gameCombinations]) + '  ')
+  window.addstr(4, 10, sepLine)
+  window.addstr(5, 10-len(compName), compName, col6)
+  window.addstr(5, 10, "│    "*n + '│')
+  window.addstr(6, 10, sepLine)
+  window.addstr(7, 10-len(opName), opName, col6)
+  window.addstr(7, 10, "│    "*n + '│')
+  window.addstr(8, 10, '└' + sepLine1[1:-1] + '┘')
   
   while True:
-    window.addstr(3, 10, '  ' + "   ".join([x.upper() if not x[0].isdigit() else x
-                                            for x in gameCombinations]) + '  ')
-    window.addstr(4, 10, sepLine)
-    window.addstr(5, 10-len(compName), compName, col6)
-    window.addstr(5, 10, "│    "*n + '│')
-    window.addstr(6, 10, sepLine)
-    window.addstr(7, 10-len(opName), opName, col6)
-    window.addstr(7, 10, "│    "*n + '│')
-    window.addstr(8, 10, '└' + sepLine1[1:-1] + '┘')
 
     showInfo("Press space to start a new game. 'q' to exit.", info)
 
@@ -130,6 +134,15 @@ def ut_interface(window):
       ch = window.getkey()
     if ch == 'q':
       break
+
+    for i in range(nCombinations) :
+      window.addstr(5, 12 + i*5, '  ');
+      window.addstr(7, 12 + i*5, '  ');
+    for i in range(5) :
+      clearDie(i, window, 9, dice_x0)
+
+    window.addstr(5, 10 + len(sepLine) + 2, "   ")
+    window.addstr(7, 10 + len(sepLine) + 2, "   ")
     
     showInfo("""Click on die to eliminate it.  'r' or space for re-roll.\n"""
              """Press on the score (green) to score. '1' keeps ones and\n"""
@@ -138,16 +151,11 @@ def ut_interface(window):
     position = game.startPosition(2)
     opTurn = random.randint(0, 1) == 0
 
-    dice_x0 = 10 + (len(sepLine)-30)//2
-
-    # if flog :
-    #   print >> flog, 'Board: "' + str(board2Code(board)) + '"'
-    #   print >> flog, "X is %s, O is %s" % (options.name, options.player)
-
     computerTurn = bool(random.randint(0,1))
 
     gameLog = []
-    gameLog.append( (opName, compName) if computerTurn else (compName, opName) )
+    gameName = game.__class__.__name__.split('.')[0]
+    gameLog.append( (gameName, opName, compName) if computerTurn else (gameName, compName, opName) )
 
     while (computerTurn and any(position[1][0])) or \
           (not computerTurn and any(position[0][0])) :
@@ -217,14 +225,15 @@ def ut_interface(window):
                   window.addstr(7, 12 + i*5, format(pts,'2d'), curses.A_BOLD)
                   bx = list(position[1][0]); bx[i] = 0;
                   position = position[:1] + ( (bx,pts + position[1][1]), )
+                  while len(mvLog) < 3:
+                    mvLog.append( ( (tuple(sorted(dice))), tuple()) )
                   mvLog.extend( (i, pts) )
                   stage = 4
 
-            elif stage < 3 and event in range(ord("1"), ord("1")+6):
+            elif stage < 3 and event in range(ord("0"), ord("1")+6):
               ## speedup
               v = int(chr(event))
               kept,rolled = [], []
-
               for i,d in enumerate(dice):
                 if d != v:
                   dice[i] = random.randint(1, 6)
@@ -340,8 +349,8 @@ def ut_interface(window):
     if flog:
       print( gameLog, file = flog )
       flog.flush()
-
-
+      
+    
 def main():
   global flog, game, player, compName, opName
   

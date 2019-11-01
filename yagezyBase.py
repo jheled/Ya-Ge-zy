@@ -506,7 +506,7 @@ best  {formatDice(k):10s} ({d[k]:1.4f} [{err:.5f}])')
         
       if abs(err) > errTH :
         s += f'({eMove:1.4f}), best play: {"mark" if ptsBest>0 else "waive"} \
-{fcats[-1-iBest]} ({ptsBest} points, {eBest:1.4f} [{err:.4f}])'
+{fcats[iBest]} ({ptsBest} points, {eBest:1.4f} [{err:.4f}])'
         e = None
     if e is not None:
       s += f'({eMove:1.4f})'

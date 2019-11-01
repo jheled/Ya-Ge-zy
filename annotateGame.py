@@ -25,13 +25,13 @@ for line in flog:
   line = line.strip()
   if line:
     gameLog = eval(line)
-    X,O = gameLog[0]
+    name, X, O = gameLog[0]
     n = len(gameLog[1:])
-    if n == 2*10:
+    if name == "Generala" and n == 2*10:
       game = Generala.Generala()
-    elif n == 2*12:
+    elif name == "Yacht" and n == 2*12:
       game = Yacht.Yacht()
-    elif n == 2*15:
+    elif "Yatzy" and n == 2*15:
       game = Yatzy.Yatzy()
     else:
       print("Corrupted match log.", file = sys.stderr)
@@ -41,3 +41,4 @@ for line in flog:
     master = genericPlayers.MindfulPlayer(game, f"data/{name.lower()}-scdist.txt")
       
     annotateGame(gameLog[1:], master, X, O, 2*1e-4)
+
