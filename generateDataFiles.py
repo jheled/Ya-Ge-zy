@@ -1,3 +1,9 @@
+## This file is part of Ya-Ge-zy.
+## Copyright (C) 2019 Joseph Heled.
+## Author: Joseph Heled <jheled@gmail.com>
+## See the file LICENSE for copying conditions.
+#
+
 import os, os.path
 
 import Generala,Yacht,Yatzy

@@ -1,3 +1,9 @@
+## This file is part of Ya-Ge-zy.
+## Copyright (C) 2019 Joseph Heled.
+## Author: Joseph Heled <jheled@gmail.com>
+## See the file LICENSE for copying conditions.
+#
+
 import random, itertools, time
 from collections import Counter, defaultdict
 
@@ -6,7 +12,7 @@ class YagezyGame:
   def __init__(self, name) :
     self.name = name
 
-  def gameCombinations(self) :
+  def gameCombinations(self, concise = False) :
     """ Dice combinations of the game. A list of strings, each a combination name. """
     assert False
 
@@ -30,7 +36,7 @@ class YagezyGame:
     
     n = len(self.gameCombinations())
     bx = [0]*n
-    drp = DiceRacePlayer("")
+    drp = YagezyPlayer("")
 
     tot = 0
     for i in range(n) :
@@ -428,7 +434,7 @@ def annotateGame(gameLog, gameMaster, X = 'X', O = 'O', errTH = 1e-9) :
   issub = lambda sb, st : set(sb).issubset(st) and (not Counter(sb) - Counter(st))
 
   concise = {"Ones" : "1s", "Twos" : "2s", "Threes" : "3s", "Fours" : "4s", "Fives" : "5s", "Sixes" : "6s"}
-  fcats = game.gameCombinations()[::-1]
+  fcats = game.gameCombinations()  #[::-1]
   nCats = len(fcats)
   cats = [concise.get(x) or x for x in fcats]
 
@@ -456,13 +462,12 @@ def annotateGame(gameLog, gameMaster, X = 'X', O = 'O', errTH = 1e-9) :
     dice0, (dice1k,dice1r), (dice2k,dice2r), iMark, pts = moveLog
     dice0,dice1k,dice1r,dice2k,dice2r = [tuple(sorted(x)) for x in (dice0,dice1k,dice1r,dice2k,dice2r)]
     k, (e,d) = gameMaster.actionR1(pos, dice0, True)
-    er = d[dice1k] - d[k] if k != dice1k else 0
-    if abs(er) > errTH :
-      #print(pos)
-      print()
-      err = d[dice1k] - d[k]
+    err = d[dice1k] - d[k] if k != dice1k else 0
+    if err != 0:
       totErr[nm % 2] += err2ELO(err)
-      print(f' {formatDice(dice0)}: move {formatDice(dice1k):10s} ({d[dice1k]:1.4f}), \
+      if abs(err) > errTH :
+        print()
+        print(f' {formatDice(dice0)}: move {formatDice(dice1k):10s} ({d[dice1k]:1.4f}), \
 best  {formatDice(k):10s} ({d[k]:1.4f} [{err:.5f}])')
     else :
       if len(dice1k) < 5:
@@ -470,12 +475,12 @@ best  {formatDice(k):10s} ({d[k]:1.4f} [{err:.5f}])')
 
     dice1 = tuple(sorted(dice1k + dice1r))
     k, (e,d) = gameMaster.actionR2(pos, dice1, True)
-    er = d[dice2k] - d[k] if k != dice2k else 0
-    if abs(er) > errTH :
-      #print(pos)
-      err = d[dice2k] - d[k]
+    err = d[dice2k] - d[k] if k != dice2k else 0
+    if err != 0 :
       totErr[nm % 2] += err2ELO(err)
-      print(f' {formatDice(dice1)}: move {formatDice(dice2k):10s} ({d[dice2k]:1.4f}), \
+      
+      if abs(err) > errTH :
+        print(f' {formatDice(dice1)}: move {formatDice(dice2k):10s} ({d[dice2k]:1.4f}), \
 best  {formatDice(k):10s} ({d[k]:1.4f} [{err:.5f}])')
     else :
       if len(dice2k) < 5:
@@ -493,21 +498,21 @@ best  {formatDice(k):10s} ({d[k]:1.4f} [{err:.5f}])')
     bx[iMark] = 0
     pos = tuple(pos[1:]) + ( (tuple(bx),pos[0][1]+pts), )
 
-    s = f' {formatDice(dice2)}: {"mark" if pts>0 else "waive"} {fcats[nCats-1-iMark]}, {pts} points '
+    s = f' {formatDice(dice2)}: {"mark" if pts>0 else "waive"} {fcats[iMark]}, {pts} points '
     if iBest != iMark:
       eBest,ptsBest = d[iBest]
-      if abs(eMove - eBest) > errTH :
-        err = eMove - eBest
-        totErr[nm % 2] += err2ELO(err)
+      err = eMove - eBest
+      totErr[nm % 2] += err2ELO(err)
         
+      if abs(err) > errTH :
         s += f'({eMove:1.4f}), best play: {"mark" if ptsBest>0 else "waive"} \
-{fcats[nCats-1-iBest]} ({ptsBest} points, {eBest:1.4f} [{eMove - eBest:.4f}])'
+{fcats[-1-iBest]} ({ptsBest} points, {eBest:1.4f} [{err:.4f}])'
         e = None
     if e is not None:
       s += f'({eMove:1.4f})'
     print(s)
     
-    pointsByCat[nm % 2][nCats-1-iMark] = pts
+    pointsByCat[nm % 2][iMark] = pts
 
   print()
   print(boardString(pointsByCat, X, O,lccats))

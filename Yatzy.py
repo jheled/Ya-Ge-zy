@@ -1,10 +1,19 @@
+## This file is part of Ya-Ge-zy.
+## Copyright (C) 2019 Joseph Heled.
+## Author: Joseph Heled <jheled@gmail.com>
+## See the file LICENSE for copying conditions.
+#
+
 from yagezyBase import YagezyGame
 
 class Yatzy(YagezyGame):
   def __init__(self) :
     super().__init__("Yatzy")
 
-  def gameCombinations(self) :
+  def gameCombinations(self, concise = False) :
+    if concise:
+      return ["1s", "2s", "3s", "4s", "5s", "6s", "pr", "pp", "ts", "fs", "ss", "ls", "fh", "co", "ya"]
+    
     return ["Ones", "Twos", "Threes", "Fours", "Fives", "Sixes",
             "1Pair", "2Pair", "3Same", "4Same", "S-Straight", "L-Straight",
             "Full", "Choice", "Yatzy"]

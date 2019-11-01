@@ -1,3 +1,9 @@
+## This file is part of Ya-Ge-zy.
+## Copyright (C) 2019 Joseph Heled.
+## Author: Joseph Heled <jheled@gmail.com>
+## See the file LICENSE for copying conditions.
+#
+
 from yagezyBase import *
 
 class WhateverPlayer(YagezyPlayer) :
@@ -64,7 +70,7 @@ class SimplePlayer(YagezyPlayer) :
 
     rts,rolls = self.rts,self.rolls
 
-    from DiceRaceBase import pow6,merg5
+    from yagezyBase import pow6,merg5
 
     expandedRollsDist = dict()
     for nKept in range(1,6) :
@@ -131,7 +137,7 @@ class OSTBPlayer(YagezyPlayer) :
   be the expected score or any other heuristic.
   """
   
-  def __init__(self, game, method, values) :
+  def __init__(self, game, values, method="maxi") :
     super().__init__(f"ostb({method}-{game.name}")
     self.game = game
     if isinstance(values, str) :
@@ -301,7 +307,7 @@ class MindfulPlayer(YagezyPlayer) :
   optimal. Yacht and Yatzy are too big to solve, so difference to optimal is unknown.
   """
   
-  def __init__(self, game, method, scoreDists) :
+  def __init__(self, game, scoreDists, method = "maxi") :
     super().__init__(f"mindfule({method}-{game.name}")
     self.game = game
 
