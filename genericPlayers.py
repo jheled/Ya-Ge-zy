@@ -11,13 +11,9 @@ class WhateverPlayer(YagezyPlayer) :
      points."""
   
   def __init__(self, game) :
-    super().__init__(f"whatever-{game.name}")
-    self.game = game
+    super().__init__(game, f"whatever-{game.name}")
 
-  def actionR1(self, pos, dice) :
-    return dice
-
-  def actionR2(self, pos, dice) :
+  def actionRoll(self, nr, pos, dice) :
     return dice
   
   def actionEndTurn(self, pos, dice) :
@@ -31,11 +27,12 @@ class WhateverPlayer(YagezyPlayer) :
         iScore.append(i)
     return iScore
 
+from yagezyBase import pow6,merge
+  
 class SimplePlayer(YagezyPlayer) :
   """ Simple minded player, supposed to be human level, but who knows. """
   def __init__(self, game) :
-    super().__init__(f"simple-{game.name}")
-    self.game = game
+    super().__init__(game, f"simple-{game.name}")
 
     nCombinations = len(game.gameCombinations())
     bx = [0]*nCombinations
@@ -62,6 +59,8 @@ class SimplePlayer(YagezyPlayer) :
 
   def generateMaximizerScoreDists(self) :
     from collections import defaultdict
+
+    nDice = self.game.nDice
     
     dists = dict()
     nc = len(self.game.gameCombinations())
@@ -70,11 +69,9 @@ class SimplePlayer(YagezyPlayer) :
 
     rts,rolls = self.rts,self.rolls
 
-    from yagezyBase import pow6,merg5
-
     expandedRollsDist = dict()
-    for nKept in range(1,6) :
-      nToRoll = 5 - nKept
+    for nKept in range(1,nDice+1) :
+      nToRoll = nDice - nKept
       for keep in rolls[nKept]:
         dl = []
         if nToRoll == 0:
@@ -83,47 +80,49 @@ class SimplePlayer(YagezyPlayer) :
           ct = rolls[nToRoll]
           f = pow6[nToRoll]
           for d,c in ct.items():
-            r = merg5(keep, d);
+            r = merge(keep, d);
             dl.append( (r, c/f) )
         expandedRollsDist[keep] = dl
 
-    expandedRollsDist[tuple()] = [ (dice,wt/6**5) for dice,wt in rolls[-1].items() ]
+    expandedRollsDist[tuple()] = [ (dice,wt/pow5[nDice]) for dice,wt in rolls[-1].items() ]
       
     for n in range(1, nc+1) :
       for i in range(2**nc) :
         bx = tuple(int(x) for x in format(i, bfrmt))
         if sum(bx) == n:
-          lv3 = self.lev3( ((bx,0),) )
-          flv2 = self.lev2(lv3, True)
-          lv2 = { dice : x[0] for dice,x in flv2.items() }
+          if self.game.nReRolls == 2:
+            lv3 = self.lev3( ((bx,0),) )
+            flv2 = self.lev2(lv3, True)
+            lv2 = { dice : x[0] for dice,x in flv2.items() }
 
-          ## d2[dice] = probability of ending with this dice after first re-throw 
-          d2 = defaultdict( lambda : 0 )
-          for dice,wt in rolls[-1].items():
-            keep = self.actionT(dice, lv2)
-            wt /= 6**5
-            for de,pr in expandedRollsDist[keep]:
-              d2[de] += wt * pr
-              
-          ## d1[dice] = probability of ending with this dice before scoring 
-          d1 = defaultdict( lambda : 0 )
-          for dice,pr in d2.items():
-            keep = flv2[dice][1]    # cached self.actionT(dice, lv3)
+            ## d2[dice] = probability of ending with this dice after first re-throw 
+            d2 = defaultdict( lambda : 0 )
+            for dice,wt in rolls[-1].items():
+              keep = self.actionT(dice, lv2)
+              wt /= pow6[nDice]
+              for de,pr in expandedRollsDist[keep]:
+                d2[de] += wt * pr
 
-            for de,pre in expandedRollsDist[keep]:
-              d1[de] += pr * pre
-            
-          posDist = defaultdict( lambda : 0 )
-          for dice,prDice in d1.items():
-            iMoves = self.actionEndTurn( ((bx,0),), dice )
-            for iMove in iMoves:
-              pts = self.l3points[iMove,dice]
-              p = prDice/len(iMoves)
-              b = list(bx); b[iMove] = 0; b = tuple(b)
-              for score,prScore in dists[b].items():
-                posDist[score + pts] += prScore * p
-          dists[bx] = dict(posDist)
-          
+            ## d1[dice] = probability of ending with this dice before scoring 
+            d1 = defaultdict( lambda : 0 )
+            for dice,pr in d2.items():
+              keep = flv2[dice][1]    # cached self.actionT(dice, lv3)
+
+              for de,pre in expandedRollsDist[keep]:
+                d1[de] += pr * pre
+
+            posDist = defaultdict( lambda : 0 )
+            for dice,prDice in d1.items():
+              iMoves = self.actionEndTurn( ((bx,0),), dice )
+              for iMove in iMoves:
+                pts = self.l3points[iMove,dice]
+                p = prDice/len(iMoves)
+                b = list(bx); b[iMove] = 0; b = tuple(b)
+                for score,prScore in dists[b].items():
+                  posDist[score + pts] += prScore * p
+            dists[bx] = dict(posDist)
+          else:
+            assert False
     return dists
 
 # One-Sided-Table-Based
@@ -138,8 +137,7 @@ class OSTBPlayer(YagezyPlayer) :
   """
   
   def __init__(self, game, values, method="maxi") :
-    super().__init__(f"ostb({method}-{game.name}")
-    self.game = game
+    super().__init__(game, f"ostb({method}-{game.name}")
     if isinstance(values, str) :
       values = self.loadValues(values)
     self.values = values
@@ -167,6 +165,8 @@ class OSTBPlayer(YagezyPlayer) :
   #####################################
   ## Data generation
   def generateMaximizerValues(self) :
+    nDice = self.game.nDice
+    
     self.values = dict()
     nc = len(self.game.gameCombinations())
     self.values[(0,)*nc] = 0.0
@@ -174,41 +174,42 @@ class OSTBPlayer(YagezyPlayer) :
 
     rts,rolls = self.rts,self.rolls
 
-    from yagezyBase import pow6, merg5
-    
     for n in range(1,nc+1) :
       for i in range(2**nc) :
         bx = tuple(int(x) for x in format(i, bfrmt))
         if sum(bx) == n:
-          pos = [(bx,0)]
-          lv3 = self.lev3(pos)
-          lv2 = self.lev2(lv3)
+          if self.game.nReRolls == 2:
+            pos = [(bx,0)]
+            lv3 = self.lev3(pos)
+            lv2 = self.lev2(lv3)
 
-          cac = dict()
-          ee = 0.0
-          for dice,wt in rolls[-1].items():
-            mxe = -float('inf')
-            for x in rts:
-              sz = tuple(dice[i] for i in x)
-              e = cac.get(sz)
-              if e is None:
-                nToRoll = 5 - len(sz)
-                if nToRoll == 0:
-                  e = lv2[sz]
-                else :
-                  ct = rolls[nToRoll]
-                  e = 0
-                  for d,c in ct.items():
-                    r = merg5(sz, d);
-                    e += lv2[r] * c
-                  e /= pow6[nToRoll]
-                cac[sz] = e
-              if mxe < e:
-                mxe = e
-            ee += mxe * wt
-          
-          self.values[bx] = ee/6**5
+            cac = dict()
+            ee = 0.0
+            for dice,wt in rolls[-1].items():
+              mxe = -float('inf')
+              for x in rts:
+                sz = tuple(dice[i] for i in x)
+                e = cac.get(sz)
+                if e is None:
+                  nToRoll = nDice - len(sz)
+                  if nToRoll == 0:
+                    e = lv2[sz]
+                  else :
+                    ct = rolls[nToRoll]
+                    e = 0
+                    for d,c in ct.items():
+                      r = merge(sz, d);
+                      e += lv2[r] * c
+                    e /= pow6[nToRoll]
+                  cac[sz] = e
+                if mxe < e:
+                  mxe = e
+              ee += mxe * wt
 
+            self.values[bx] = ee/pow6[nDice]
+          else:
+            assert False
+            
   def saveValues(self, fileName) :
     ff = open(fileName, 'w')
     for k,v in self.values.items():
@@ -226,6 +227,7 @@ class OSTBPlayer(YagezyPlayer) :
     
   def generateMaximizerScoreDists(self) :
     from collections import defaultdict
+    nDice = self.game.nDice
     
     dists = dict() # defaultdict( lambda : defaultdict( lambda : 0 ) )
     nc = len(self.game.gameCombinations())
@@ -234,11 +236,9 @@ class OSTBPlayer(YagezyPlayer) :
 
     rts,rolls = self.rts,self.rolls
 
-    from yagezyBase import pow6,merg5
-
     expandedRollsDist = dict()
-    for nKept in range(1,6) :
-      nToRoll = 5 - nKept
+    for nKept in range(1,nDice+1) :
+      nToRoll = nDice - nKept
       for keep in rolls[nKept]:
         dl = []
         if nToRoll == 0:
@@ -247,48 +247,51 @@ class OSTBPlayer(YagezyPlayer) :
           ct = rolls[nToRoll]
           f = pow6[nToRoll]
           for d,c in ct.items():
-            r = merg5(keep, d);
+            r = merge(keep, d);
             dl.append( (r, c/f) )
         expandedRollsDist[keep] = dl
 
-    expandedRollsDist[tuple()] = [ (dice,wt/6**5) for dice,wt in rolls[-1].items() ]
+    expandedRollsDist[tuple()] = [ (dice,wt/pow6[nDice]) for dice,wt in rolls[-1].items() ]
       
     for n in range(1, nc+1) :
       for i in range(2**nc) :
         bx = tuple(int(x) for x in format(i, bfrmt))
         if sum(bx) == n:
-          flv3 = { dice : max(self.scores(dice, bx, 0)) for dice in self.rolls[-1] }
-          lv3 = { dice : x[0] for dice,x in flv3.items() }
-          flv2 = self.lev2(lv3, True)
-          lv2 = { dice : x[0] for dice,x in flv2.items() }
+          if self.game.nReRolls == 2:
+            flv3 = { dice : max(self.scores(dice, bx, 0)) for dice in self.rolls[-1] }
+            lv3 = { dice : x[0] for dice,x in flv3.items() }
+            flv2 = self.lev2(lv3, True)
+            lv2 = { dice : x[0] for dice,x in flv2.items() }
 
-          #l3 = self.lev3([(bx,0)]); l2 = self.lev2(l3)
+            #l3 = self.lev3([(bx,0)]); l2 = self.lev2(l3)
 
-          ##import pdb; pdb.set_trace()
-          ## d2[dice] = probability of ending with this dice after first re-throw 
-          d2 = defaultdict( lambda : 0 )
-          for dice,wt in rolls[-1].items():
-            keep = self.actionT(dice, lv2)
-            wt /= 6**5
-            for de,pr in expandedRollsDist[keep]:
-              d2[de] += wt * pr
-              
-          ## d1[dice] = probability of ending with this dice before scoring 
-          d1 = defaultdict( lambda : 0 )
-          for dice,pr in d2.items():
-            keep = flv2[dice][1]    # cached self.actionT(dice, lv3)
+            ##import pdb; pdb.set_trace()
+            ## d2[dice] = probability of ending with this dice after first re-throw 
+            d2 = defaultdict( lambda : 0 )
+            for dice,wt in rolls[-1].items():
+              keep = self.actionT(dice, lv2)
+              wt /= pow6[nDice]
+              for de,pr in expandedRollsDist[keep]:
+                d2[de] += wt * pr
 
-            for de,pre in expandedRollsDist[keep]:
-              d1[de] += pr * pre
+            ## d1[dice] = probability of ending with this dice before scoring 
+            d1 = defaultdict( lambda : 0 )
+            for dice,pr in d2.items():
+              keep = flv2[dice][1]    # cached self.actionT(dice, lv3)
+
+              for de,pre in expandedRollsDist[keep]:
+                d1[de] += pr * pre
+
+            posDist = defaultdict( lambda : 0 )
+            for dice,prDice in d1.items():
+              iMove,pts = flv3[dice][1:]
+              b = list(bx); b[iMove] = 0; b = tuple(b)
+              for score,prScore in dists[b].items():
+                posDist[score + pts] += prScore * prDice
+            dists[bx] = dict(posDist)
+          else:
+            assert False
             
-          posDist = defaultdict( lambda : 0 )
-          for dice,prDice in d1.items():
-            iMove,pts = flv3[dice][1:]
-            b = list(bx); b[iMove] = 0; b = tuple(b)
-            for score,prScore in dists[b].items():
-              posDist[score + pts] += prScore * prDice
-          dists[bx] = dict(posDist)
-          
     return dists  ##{ x : dict(v) for x,v in dists.items() }
 
 def flattenDist(dist, size) :
@@ -308,8 +311,7 @@ class MindfulPlayer(YagezyPlayer) :
   """
   
   def __init__(self, game, scoreDists, method = "maxi") :
-    super().__init__(f"mindfule({method}-{game.name}")
-    self.game = game
+    super().__init__(game, f"mindfule({method}-{game.name}")
 
     scoreMax = game.maxScore() + 1
     if isinstance(scoreDists, str) :

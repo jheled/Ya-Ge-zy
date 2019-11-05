@@ -8,7 +8,7 @@
 import argparse, sys
 import curses, random, time
 
-import Generala,Yacht,Yatzy,genericPlayers
+import Generala,Yacht,Yatzy,Crag,genericPlayers
 
 die1 = """ ▁▁▁
 ┃   ┃
@@ -106,11 +106,13 @@ def ut_interface(window):
 
   gameCombinations = game.gameCombinations(concise = True)
   nCombinations = n = len(gameCombinations)
-
+  nDice = game.nDice
+  nReRolls = game.nReRolls
+  
   sepLine = '├' + (('─'*4 + "┼")*nCombinations)[:-1] + '┤'
   sepLine1 = '├' + (('─'*4 + "┴")*nCombinations)[:-1] + '┤'
 
-  dice_x0 = 10 + (len(sepLine)-30)//2
+  dice_x0 = 10 + (len(sepLine)- 6*nDice)//2
 
   info = window.subwin(10, 60, 15, 3)
   debug = None # window.subwin(1, 120, 20, 3)
@@ -138,7 +140,7 @@ def ut_interface(window):
     for i in range(nCombinations) :
       window.addstr(5, 12 + i*5, '  ');
       window.addstr(7, 12 + i*5, '  ');
-    for i in range(5) :
+    for i in range(nDice) :
       clearDie(i, window, 9, dice_x0)
 
     window.addstr(5, 10 + len(sepLine) + 2, "   ")
@@ -164,18 +166,18 @@ def ut_interface(window):
       mvLog = []
 
       if not computerTurn:
-        dice = [random.randint(1, 6) for _ in range(5)]
+        dice = [random.randint(1, 6) for _ in range(nDice)]
         mvLog.append(tuple(dice))
 
         window.addstr(11, dice_x0 - 10, "1st Roll:")
 
-        for j in range(5) :
+        for j in range(nDice) :
           drawDie(dice[j], j, window, 9, dice_x0, opDieColor)
         stage = 1
 
-        while stage < 4:
+        while stage < nReRolls + 2:
 
-          if sum(x is not None for x in dice) == 5:
+          if sum(x is not None for x in dice) == nDice:
             for i,pts in game.rollScores(tuple(sorted(dice)), position[1][0]) :
               window.addstr(7, 12 + i*5, format(pts,'2d'), curses.color_pair(3))
           else:
@@ -187,7 +189,7 @@ def ut_interface(window):
           if event in [ord("q"), ord("e")] :
             break
 
-          if stage < 3 and (event == ord(" ") or event == ord("r")) :
+          if stage < nReRolls+1 and (event == ord(" ") or event == ord("r")) :
             kept = [d for d in dice if d is not None]
             rolled = []
             for j,d in enumerate(dice) :
@@ -208,7 +210,7 @@ def ut_interface(window):
               if 9 < my < 9+dieHeight-1 :
                 z = mx - dice_x0
                 i = z//6
-                if 0 <= i < 5 and 0 < z % 6 < dieWidth-1:
+                if 0 <= i < nDice and 0 < z % 6 < dieWidth-1:
                   showInfo(f"{(mx,my)} {i}", debug)
                   if dice[i] is not None:
                     clearDie(i, window, 9, dice_x0)
@@ -225,12 +227,12 @@ def ut_interface(window):
                   window.addstr(7, 12 + i*5, format(pts,'2d'), curses.A_BOLD)
                   bx = list(position[1][0]); bx[i] = 0;
                   position = position[:1] + ( (bx,pts + position[1][1]), )
-                  while len(mvLog) < 3:
+                  while len(mvLog) < nReRolls+1:
                     mvLog.append( ( (tuple(sorted(dice))), tuple()) )
                   mvLog.extend( (i, pts) )
-                  stage = 4
+                  stage = nReRolls+2
 
-            elif stage < 3 and event in range(ord("0"), ord("1")+6):
+            elif stage < nReRolls+1 and event in range(ord("0"), ord("1")+6):
               ## speedup
               v = int(chr(event))
               kept,rolled = [], []
@@ -243,8 +245,8 @@ def ut_interface(window):
                   kept.append(d)
               mvLog.append( (tuple(kept), tuple(rolled)) )
               stage += 1
-          if stage == 2:
-            window.addstr(11, dice_x0 - 10, "2nd Roll:")
+          if stage <= nReRolls:
+            window.addstr(11, dice_x0 - 10, f"{stage}nd Roll:")
           else :
             window.addstr(11, dice_x0 - 10, "         ")
 
@@ -260,68 +262,40 @@ def ut_interface(window):
         window.refresh()
 
         ## roll 1
-        dice = [random.randint(1, 6) for _ in range(5)]
+        dice = [random.randint(1, 6) for _ in range(nDice)]
         mvLog.append( tuple(dice) )
 
-        for j in range(5) :
+        for j in range(nDice) :
           drawDie(dice[j], j, window, 9, dice_x0, compDieColor)
-        keep = list(player.actionR1(position, tuple(sorted(dice))))
 
-        showInfo(f"{dice} {keep}", debug)
-        window.refresh()
-        time.sleep(delay)
+        for nr in range(nReRolls) :
+          keep = list(player.actionRoll(nr+1, position, tuple(sorted(dice))))
 
-        rolled = []
-        mvLog.append( (tuple(keep), None) )
-
-        if len(keep) < 5 :
-          for i,d in enumerate(dice) :
-            if d not in keep:
-              dice[i] = None
-              clearDie(i, window, 9, dice_x0)
-            else :
-              keep.remove(d)
+          showInfo(f"{dice} {keep}", debug)
           window.refresh()
           time.sleep(delay)
+          
+          rolled = []
+          mvLog.append( (tuple(keep), None) )
 
-          ## roll 2
-          for j,d in enumerate(dice) :
-            if d is None:
-              dice[j] = random.randint(1, 6)
-              rolled.append(dice[j])
+          if len(keep) < nDice :
+            for i,d in enumerate(dice) :
+              if d not in keep:
+                dice[i] = None
+                clearDie(i, window, 9, dice_x0)
+              else :
+                keep.remove(d)
+            window.refresh()
+            time.sleep(delay)
 
-              drawDie(dice[j], j, window, 9, dice_x0, compDieColor)
+            for j,d in enumerate(dice) :
+              if d is None:
+                dice[j] = random.randint(1, 6)
+                rolled.append(dice[j])
 
-        mvLog[-1] = (mvLog[-1][0], tuple(rolled))
-        rolled = []
+                drawDie(dice[j], j, window, 9, dice_x0, compDieColor)
 
-        keep = list(player.actionR2(position, tuple(sorted(dice))))
-        mvLog.append( (tuple(keep), None) )
-
-        if len(keep) < 5:
-          window.refresh()
-          time.sleep(delay)
-
-          for i,d in enumerate(dice) :
-            if d not in keep:
-              dice[i] = None
-              clearDie(i, window, 9, dice_x0)
-            else :
-              keep.remove(d)
-          window.refresh()
-          time.sleep(delay)
-
-          ## roll 3
-          for j,d in enumerate(dice) :
-            if d is None:
-              dice[j] = random.randint(1, 6)
-              rolled.append(dice[j])
-              drawDie(dice[j], j, window, 9, dice_x0, compDieColor)
-
-          window.refresh()
-          time.sleep(delay)
-
-        mvLog[-1] = (mvLog[-1][0], tuple(rolled))
+          mvLog[-1] = (mvLog[-1][0], tuple(rolled))
 
         dice = tuple(sorted(dice))
         iMoves = player.actionEndTurn(position, dice)
@@ -363,7 +337,8 @@ def main():
   parser.add_argument("--player", "-p", metavar="OPPONENT-NAME", choices=["Joe", "Maximux", "Titus"],
                       default = "Maximux", help = "")
 
-  parser.add_argument('game', metavar='GAME', choices=["Yatzy", "Yacht", "Generala"], help="yatzy/yacht/generala")
+  parser.add_argument('game', metavar='GAME', choices=["Yatzy", "Yacht", "Generala", "Crag"],
+                      help="yatzy/yacht/generala/crag")
   
   options = parser.parse_args()
 

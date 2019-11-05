@@ -6,10 +6,10 @@
 #
 
 import argparse, sys
-import Generala,Yacht,Yatzy,genericPlayers
+import Generala,Yacht,Yatzy,Crag,genericPlayers
 from yagezyBase import annotateGame
   
-parser = argparse.ArgumentParser(description = """Annotate a Yatzy/Yacht/Generala game.""")
+parser = argparse.ArgumentParser(description = """Annotate a Yatzy/Yacht/Generala/Crag game.""")
 
 parser.add_argument('gamelog', metavar='FILE', help="File name.")
   
@@ -33,6 +33,8 @@ for line in flog:
       game = Yacht.Yacht()
     elif "Yatzy" and n == 2*15:
       game = Yatzy.Yatzy()
+    elif "Crag" and n == 2*13:
+      game = Crag.Crag()
     else:
       print("Corrupted match log.", file = sys.stderr)
       sys.exit(1)
