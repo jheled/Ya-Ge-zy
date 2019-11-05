@@ -1,7 +1,7 @@
 # Ya-Ge-zy
-The dice games of Generala, Yacht and Yatzy.
+The dice games of Generala, Yacht, Yatzy, and even Crag.
 
-Initial offering. Text interface only (curses) at the moment, but extremely
+Initial offering. Text interface only at the moment (curses), but extremely
 strong players.
 
 Run 'python3 generateDataFiles.py' to generate the data files.
@@ -13,7 +13,7 @@ Or better yet download them: In the Ya-Ge-zy directory do,
 
 To play, run
 
-`>>>` ./yagezyConsole.py -n YOUR-NAME -r FILE-TO-LOG-GAMES Generala  (or Yacht or Yatzy)
+`>>>` ./yagezyConsole.py -n YOUR-NAME -r FILE-TO-LOG-GAMES Generala  (or Yacht, Yatzy or Crag)
 
 To analyze your play, run
 

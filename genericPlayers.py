@@ -178,37 +178,37 @@ class OSTBPlayer(YagezyPlayer) :
       for i in range(2**nc) :
         bx = tuple(int(x) for x in format(i, bfrmt))
         if sum(bx) == n:
+          pos = [(bx,0)]
+          lv3 = self.lev3(pos)
           if self.game.nReRolls == 2:
-            pos = [(bx,0)]
-            lv3 = self.lev3(pos)
-            lv2 = self.lev2(lv3)
+            eqm = lv2 = self.lev2(lv3)
+          elif self.game.nReRolls == 1:
+            eqm = lv3
 
-            cac = dict()
-            ee = 0.0
-            for dice,wt in rolls[-1].items():
-              mxe = -float('inf')
-              for x in rts:
-                sz = tuple(dice[i] for i in x)
-                e = cac.get(sz)
-                if e is None:
-                  nToRoll = nDice - len(sz)
-                  if nToRoll == 0:
-                    e = lv2[sz]
-                  else :
-                    ct = rolls[nToRoll]
-                    e = 0
-                    for d,c in ct.items():
-                      r = merge(sz, d);
-                      e += lv2[r] * c
-                    e /= pow6[nToRoll]
-                  cac[sz] = e
-                if mxe < e:
-                  mxe = e
-              ee += mxe * wt
+          cac = dict()
+          ee = 0.0
+          for dice,wt in rolls[-1].items():
+            mxe = -float('inf')
+            for x in rts:
+              sz = tuple(dice[i] for i in x)
+              e = cac.get(sz)
+              if e is None:
+                nToRoll = nDice - len(sz)
+                if nToRoll == 0:
+                  e = eqm[sz]
+                else :
+                  ct = rolls[nToRoll]
+                  e = 0
+                  for d,c in ct.items():
+                    r = merge(sz, d);
+                    e += eqm[r] * c
+                  e /= pow6[nToRoll]
+                cac[sz] = e
+              if mxe < e:
+                mxe = e
+            ee += mxe * wt
 
-            self.values[bx] = ee/pow6[nDice]
-          else:
-            assert False
+          self.values[bx] = ee/pow6[nDice]
             
   def saveValues(self, fileName) :
     ff = open(fileName, 'w')
@@ -257,15 +257,15 @@ class OSTBPlayer(YagezyPlayer) :
       for i in range(2**nc) :
         bx = tuple(int(x) for x in format(i, bfrmt))
         if sum(bx) == n:
+          flv3 = { dice : max(self.scores(dice, bx, 0)) for dice in self.rolls[-1] }
+          lv3 = { dice : x[0] for dice,x in flv3.items() }
+
           if self.game.nReRolls == 2:
-            flv3 = { dice : max(self.scores(dice, bx, 0)) for dice in self.rolls[-1] }
-            lv3 = { dice : x[0] for dice,x in flv3.items() }
             flv2 = self.lev2(lv3, True)
             lv2 = { dice : x[0] for dice,x in flv2.items() }
 
             #l3 = self.lev3([(bx,0)]); l2 = self.lev2(l3)
 
-            ##import pdb; pdb.set_trace()
             ## d2[dice] = probability of ending with this dice after first re-throw 
             d2 = defaultdict( lambda : 0 )
             for dice,wt in rolls[-1].items():
@@ -281,18 +281,24 @@ class OSTBPlayer(YagezyPlayer) :
 
               for de,pre in expandedRollsDist[keep]:
                 d1[de] += pr * pre
-
-            posDist = defaultdict( lambda : 0 )
-            for dice,prDice in d1.items():
-              iMove,pts = flv3[dice][1:]
-              b = list(bx); b[iMove] = 0; b = tuple(b)
-              for score,prScore in dists[b].items():
-                posDist[score + pts] += prScore * prDice
-            dists[bx] = dict(posDist)
           else:
-            assert False
-            
-    return dists  ##{ x : dict(v) for x,v in dists.items() }
+            ## d1[dice] = probability of ending with this dice before scoring 
+            d1 = defaultdict( lambda : 0 )
+            for dice,wt in rolls[-1].items() :
+              keep = self.actionT(dice, lv3)
+              pr = wt / pow6[nDice]
+              for de,pre in expandedRollsDist[keep]:
+                d1[de] += pr * pre
+
+          posDist = defaultdict( lambda : 0 )
+          for dice,prDice in d1.items():
+            iMove,pts = flv3[dice][1:]
+            b = list(bx); b[iMove] = 0; b = tuple(b)
+            for score,prScore in dists[b].items():
+              posDist[score + pts] += prScore * prDice
+          dists[bx] = dict(posDist)
+
+    return dists
 
 def flattenDist(dist, size) :
   d = [0]*size

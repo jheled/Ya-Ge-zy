@@ -6,16 +6,16 @@
 
 import os, os.path
 
-import Generala,Yacht,Yatzy
+import Generala,Yacht,Yatzy,Crag
 from genericPlayers import OSTBPlayer, MindfulPlayer
 
 maxiSuffix = "-maxi"
 scSuffix = "-scdist"
 
-if not os.path.exists(data) :
+if not os.path.exists('data') :
   os.mkdir('data')
   
-for gameClass in (Generala, Yacht, Yatzy) :
+for gameClass in (Generala, Yacht, Yatzy, Crag) :
   gameName = gameClass.__name__
   game = getattr(gameClass, gameName)()
 
