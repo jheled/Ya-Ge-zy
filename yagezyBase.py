@@ -475,9 +475,9 @@ def annotateGame(gameLog, gameMaster, X = 'X', O = 'O', errTH = 1e-9) :
       err = d[dice1k] - d[k] if k != dice1k else 0
       if err != 0:
         totErr[nm % 2] += err2ELO(err)
-        if abs(err) > errTH :
-          ##print()
-          print(f' {formatDice(dice0)}: move {formatDice(dice1k, 1)} ({d[dice1k]:+1.4f}), \
+      if abs(err) > errTH :
+        ##print()
+        print(f' {formatDice(dice0)}: move {formatDice(dice1k, 1)} ({d[dice1k]:+1.4f}), \
 best {formatDice(k,1)} ({d[k]:+1.4f} [{err:.5f}])')
       else :
         if len(dice1k) < nDice:

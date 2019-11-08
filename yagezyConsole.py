@@ -252,13 +252,14 @@ def ut_interface(window):
 
         if event in [ord("q"),ord("e")] :
           break
-      else :
-        window.addstr(11, dice_x0 - 10, "         ")
         for i,b in enumerate(position[1][0]) :
           if b :
             window.addstr(7, 12 + i*5, '  ');
 
         window.addstr(7, 10 + len(sepLine) + 2, format(position[1][1],'3d'))
+        window.refresh()
+      else :
+        window.addstr(11, dice_x0 - 10, "         ")
         window.refresh()
 
         ## roll 1
