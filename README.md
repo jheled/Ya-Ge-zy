@@ -4,9 +4,8 @@ The dice games of Generala, Yacht, Yatzy, and even Crag.
 Initial offering. Text interface only at the moment (curses), but extremely
 strong players.
 
-Read all about it here
-https://figshare.com/articles/Stay_in_Command_Optimal_Play_for_Two_Person_Generala/10250957 (or at
-least something).
+Read all about it (or at least something) here
+https://content.sciendo.com/view/journals/rmm/7/13/article-p53.xml.
 
 Run 'python3 generateDataFiles.py' to generate the data files.
 Or better yet download them: In the Ya-Ge-zy directory do,
